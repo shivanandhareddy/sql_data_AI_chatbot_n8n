@@ -1,0 +1,253 @@
+{
+  "name": "Chatbot copy",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "ad401ddb-ac33-467f-8fb8-2651c7b903cc",
+      "name": "When chat message received",
+      "webhookId": "7fa7bac1-6de9-47fb-bb3c-5a6fbda07021"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        240,
+        320
+      ],
+      "id": "d9957633-77ff-4b92-95ec-fc527e78bf26",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EqgEqkaghR6K57lu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        340,
+        320
+      ],
+      "id": "1aaa82d3-184b-4aad-9e06-7598db65cdf7",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert SQL assistant. \nThe PostgreSQL database has the following tables and columns:\n\n- audit_logs(id, action_by, action_type, message, created_at)\n- customers(id, name, email, phone, first_order_date, last_order_date, total_orders, lifetime_value)\n- employees(id, name, email, role, password, created_at)\n- order_items(id, order_id, product_id, quantity, total_price)\n- orders(id, customer_id, order_date, status, payment_status, notes)\n- products(id, name, sku, price, stock, category, restock_threshold)\n- shipments(id, order_id, shipped_date, delivery_date, carrier, tracking_number)\n- support_tickets(id, customer_id, subject, status, created_at, resolved_at)\n\nWhen the user asks a question, reply ONLY with a complete, executable PostgreSQL SQL query. Do NOT include explanations, markdown, or any extra text. Output only the SQL query.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "4550f5ba-5dd3-48b1-a841-143142ce909b",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{$json[\"sql\"]}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        0
+      ],
+      "id": "6173ee28-ec33-4451-a153-f60ca874e614",
+      "name": "Postgres",
+      "credentials": {
+        "postgres": {
+          "id": "mC30mnPOikPLZ4oj",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let sql = $json.output || $json.message || \"\";\nsql = sql.replace(/```sql|```/gi, \"\").trim();\nreturn { sql };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        580,
+        0
+      ],
+      "id": "cc2a9138-1352-495a-9c3e-ca784804ed96",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = items.map(i => i.json);\n// Assume the incoming item (the first one) still has 'question'\nreturn [{\n  data: JSON.stringify(rows, null, 2),\n  question: items[0].json.question  // <-- this keeps the user's question!\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        0
+      ],
+      "id": "5ecb3f79-53cb-4242-b3b2-7f83f835cdf6",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI assistant for real-time database Q&A.\n\nInstructions:\n- If \"data\" contains an array of objects (a table with multiple rows/columns), display the data as a readable table.\n- If \"data\" contains only a single row (for example, a count, sum, or single record), answer the user's question directly using that data. Do NOT display it as a table unless it helps clarity.\n- If \"data\" is missing, not an array, or is just a conversational message, respond as a normal chatbot.\n\nData (if present):\n{{ $json.data }}\n\nUser question:\n{{ $json.user_question }}\n\nHow to reply:\n- If \"data\" is a table (multiple records/columns), display the table.\n- If \"data\" is just a single value (like a count), answer the user's question directly (e.g., “There are 27 shipped orders.”).\n- If \"data\" is not present, just chat.\n\nBe clear, concise, and helpful.\n\n\nalso analyize data\n\nRespond as instructed above.\n",
+        "options": {
+          "systemMessage": "="
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "id": "5004c59e-bdac-4144-ba7a-b3b846b0f76a",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1220,
+        220
+      ],
+      "id": "f5e8aace-eb97-470a-84c0-f4c638012d1f",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EqgEqkaghR6K57lu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Postgres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "87f48ecc-058f-4d08-8c61-602539991457",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "652279d29bee6adfd34ff24e603187035f2c4fa51efcdd32061b16a3438de0e4"
+  },
+  "id": "wCs7WtA719sGszXw",
+  "tags": []
+}
