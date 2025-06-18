@@ -1,0 +1,81 @@
+-- WARNING: This schema is for context only and is not meant to be run.
+-- Table order and constraints may not be valid for execution.
+
+CREATE TABLE public.audit_logs (
+  id integer NOT NULL DEFAULT nextval('audit_logs_id_seq'::regclass),
+  action_by character varying,
+  action_type character varying,
+  message text,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT audit_logs_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.customers (
+  id integer NOT NULL DEFAULT nextval('customers_id_seq'::regclass),
+  name character varying,
+  email character varying,
+  phone character varying,
+  first_order_date timestamp without time zone,
+  last_order_date timestamp without time zone,
+  total_orders integer DEFAULT 0,
+  lifetime_value numeric DEFAULT 0.00,
+  CONSTRAINT customers_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.employees (
+  id integer NOT NULL DEFAULT nextval('employees_id_seq'::regclass),
+  name character varying,
+  email character varying UNIQUE,
+  role character varying,
+  password character varying,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT employees_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.order_items (
+  id integer NOT NULL DEFAULT nextval('order_items_id_seq'::regclass),
+  order_id integer,
+  product_id integer,
+  quantity integer,
+  total_price numeric,
+  CONSTRAINT order_items_pkey PRIMARY KEY (id),
+  CONSTRAINT order_items_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id),
+  CONSTRAINT order_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id)
+);
+CREATE TABLE public.orders (
+  id integer NOT NULL DEFAULT nextval('orders_id_seq'::regclass),
+  customer_id integer,
+  order_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  status character varying,
+  payment_status character varying,
+  notes text,
+  CONSTRAINT orders_pkey PRIMARY KEY (id),
+  CONSTRAINT orders_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);
+CREATE TABLE public.products (
+  id integer NOT NULL DEFAULT nextval('products_id_seq'::regclass),
+  name character varying,
+  sku character varying,
+  price numeric,
+  stock integer,
+  category character varying,
+  restock_threshold integer DEFAULT 10,
+  CONSTRAINT products_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.shipments (
+  id integer NOT NULL DEFAULT nextval('shipments_id_seq'::regclass),
+  order_id integer,
+  shipped_date timestamp without time zone,
+  delivery_date timestamp without time zone,
+  carrier character varying,
+  tracking_number character varying,
+  CONSTRAINT shipments_pkey PRIMARY KEY (id),
+  CONSTRAINT shipments_order_id_fkey FOREIGN KEY (order_id) REFERENCES public.orders(id)
+);
+CREATE TABLE public.support_tickets (
+  id integer NOT NULL DEFAULT nextval('support_tickets_id_seq'::regclass),
+  customer_id integer,
+  subject character varying,
+  status character varying,
+  created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
+  resolved_at timestamp without time zone,
+  CONSTRAINT support_tickets_pkey PRIMARY KEY (id),
+  CONSTRAINT support_tickets_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(id)
+);
